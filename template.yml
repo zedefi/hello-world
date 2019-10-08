@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Document store stack
+
+Globals:
+    Function:
+        Timeout: 3
+        Handler: controller.handler
+        Runtime: nodejs10.x
+        Tags:
+            component: document-store
+
+Parameters:
+    Env:
+        Type: String
+        Description: Deployment environment. Used e.g. as prefix for resources. Value provided by script argument (--parameter-overrides).
+    ComponentPrefixId:
+        Type: String
+        Description: Component identifier for prefixing aws resources.
+        Default: ds
+
+# RESOURCES -----------------------------------------------------------------------------------------------------------
+Resources:
+    RolGetDocument:
+        Type: AWS::IAM::Role
+        Properties:
+            Path: /
+            RoleName: !Sub ${ComponentPrefixId}-${Env}-rol-dummylambda
+            AssumeRolePolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                    - Effect: Allow
+                      Principal:
+                          Service:
+                              - lambda.amazonaws.com
+                      Action:
+                          - sts:AssumeRole
+            Policies:
+                - PolicyName: !Sub ${ComponentPrefixId}-${Env}-pol-lambda-get-document
+                  PolicyDocument:
+                      Version: '2012-10-17'
+                      Statement:
+                          - Effect: Allow
+                            Action:
+                                - logs:CreateLogGroup
+                                - logs:CreateLogStream
+                                - logs:PutLogEvents
+                            Resource:
+                                - arn:aws:logs:*:*:*
+
+    LamGetDocument:
+        Type: AWS::Serverless::Function
+        Properties:
+            FunctionName: !Sub ${ComponentPrefixId}-${Env}-dummylambda
+            CodeUri: ./src/dummylambda/
+            Role: !GetAtt RolGetDocument.Arn
